@@ -58,28 +58,24 @@ function MatrixView({ tasks, boards, mode, api, drag }) {
     finish();
   };
   // drop on a card → insert before/after based on cursor half
-  const dropOnCard = (e, zone, list, idx) => {
-    e.preventDefault(); e.stopPropagation();
-    const r = e.currentTarget.getBoundingClientRect();
-    const after = (e.clientY - r.top) > r.height / 2;
-    commit(zone, after ? (list[idx + 1] ? list[idx + 1].id : null) : list[idx].id);
-  };
-  // drop on empty zone space → append to end
-  const dropOnZone = (e, zone) => { e.preventDefault(); commit(zone, null); };
+    // drop on empty zone space → append to end
+  const dropOnZone = (e, zone) => { e.preventDefault(); commit(zone, getBeforeId(e)); };
 
   // dragover handlers: required to allow drop + drive the visual insertion line
-  const overCard = (e, zone, list, idx) => {
-    e.preventDefault(); e.stopPropagation();
-    if (!draggingId) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    const after = (e.clientY - r.top) > r.height / 2;
-    const beforeId = after ? (list[idx + 1] ? list[idx + 1].id : null) : list[idx].id;
-    setDrop(prev => (prev && prev.zone === zone && prev.beforeId === beforeId ? prev : { zone, beforeId }));
+      const getBeforeId = (e) => {
+    const cards = Array.from(e.currentTarget.querySelectorAll('div[data-id]'));
+    for (const card of cards) {
+      const r = card.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) return card.getAttribute('data-id');
+    }
+    return null;
   };
+
   const overZone = (e, zone) => {
     e.preventDefault();
     if (!draggingId) return;
-    setDrop(prev => (prev && prev.zone === zone ? prev : { zone, beforeId: null }));
+    const beforeId = getBeforeId(e);
+    setDrop(prev => (prev && prev.zone === zone && prev.beforeId === beforeId ? prev : { zone, beforeId }));
   };
 
   const renderDropLine = (accent) => (
@@ -97,7 +93,7 @@ function MatrixView({ tasks, boards, mode, api, drag }) {
         {list.map((t, i) => (
           <React.Fragment key={t.id}>
             {isHere && drop.beforeId === t.id && draggingId !== t.id && renderDropLine(accent)}
-            <div onDragOver={(e) => overCard(e, zone, list, i)} onDrop={(e) => dropOnCard(e, zone, list, i)}>
+            <div data-id={t.id}>
               <MiniTask task={t} board={boardName(t.board)} api={api}
                 accent={accent} source={source} dim={draggingId === t.id} />
             </div>

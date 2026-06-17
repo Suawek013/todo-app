@@ -100,11 +100,15 @@ function App() {
     // inbox
     addInbox: (o) => setInbox(p => [{ id: seed.uid('i'), created: Date.now(), desc: '', ...o }, ...p]),
     deleteInbox: (id) => setInbox(p => p.filter(i => i.id !== id)),
-    inboxToBoard: (item, boardId, colId) => {
-      const b = boards.find(x => x.id === boardId);
-      setTasks(p => [mkTask({ title: item.title, desc: item.desc || '', board: boardId, col: colId || firstCol(b, 'todo') }), ...p]);
-      setInbox(p => p.filter(i => i.id !== item.id));
-      flash(`Moved to ${b.icon} ${b.name}`);
+        inboxToBoard: (item, boardId, colId, beforeId) => {
+      const t = mkTask({ title: item.title, board: boardId, col: colId });
+      setTasks(p => {
+        const rest = [...p];
+        const idx = (beforeId) ? rest.findIndex(x => x.id === beforeId) : -1;
+        if (idx === -1) rest.push(t); else rest.splice(idx, 0, t);
+        return rest;
+      });
+      setInbox(p => p.filter(x => x.id !== item.id));
     },
     inboxToMatrix: (item) => {
       const b = boards[0];
@@ -131,7 +135,15 @@ function App() {
       setBoards(p => [...p, { id, name, icon, color, temporary: temp, columns }]);
       setActiveBoard(id); setView('boards'); setNewBoardOpen(false); flash(`Created ${icon} ${name}`);
     },
-    moveTask: (id, boardId, colId) => setTasks(p => p.map(t => t.id === id ? { ...t, board: boardId, col: colId } : t)),
+        moveTask: (id, boardId, colId, beforeId) => setTasks(p => {
+      const task = p.find(t => t.id === id);
+      if (!task) return p;
+      const updated = { ...task, board: boardId, col: colId };
+      const rest = p.filter(t => t.id !== id);
+      const idx = (beforeId && beforeId !== id) ? rest.findIndex(t => t.id === beforeId) : -1;
+      if (idx === -1) rest.push(updated); else rest.splice(idx, 0, updated);
+      return rest;
+    }),
     addTaskToCol: (boardId, colId, title) => {
       const t = mkTask({ title: title || 'New task', board: boardId, col: colId });
       setTasks(p => [...p, t]);

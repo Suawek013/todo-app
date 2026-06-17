@@ -11,12 +11,22 @@ function BoardsView({ boards, tasks, activeBoard, api, drag }) {
   const pct = boardTasks.length ? Math.round((done / boardTasks.length) * 100) : 0;
   const [dropCol, setDropCol] = React.useState(null);
 
+  
+  const getBeforeId = (e) => {
+    const cards = Array.from(e.currentTarget.querySelectorAll('div[data-id]'));
+    for (const card of cards) {
+      const r = card.getBoundingClientRect();
+      if (e.clientY < r.top + r.height / 2) return card.getAttribute('data-id');
+    }
+    return null;
+  };
   const onDropTo = (e, colId) => {
+    const beforeId = getBeforeId(e);
     e.preventDefault();
     setDropCol(null);
     if (drag && (drag.kind === 'task' || drag.kind === 'inbox')) {
-      if (drag.kind === 'task') api.moveTask(drag.payload.id, board.id, colId);
-      else api.inboxToBoard(drag.payload, board.id, colId);
+      if (drag.kind === 'task') api.moveTask(drag.payload.id, board.id, colId, beforeId);
+      else api.inboxToBoard(drag.payload, board.id, colId, beforeId);
       api.setDrag(null);
     }
   };
@@ -80,7 +90,7 @@ function BoardsView({ boards, tasks, activeBoard, api, drag }) {
             <div key={col.id}
               className="col"
               style={{ width: 300, flexShrink: 0, gap: 9 }}
-              onDragOver={(e) => { e.preventDefault(); setDropCol(col.id); }}
+              onDragOver={(e) => { e.preventDefault(); setDropCol({ colId: col.id, beforeId: getBeforeId(e) }); }}
               onDragLeave={(e) => { if (e.currentTarget === e.target) setDropCol(null); }}
               onDrop={(e) => onDropTo(e, col.id)}>
               <div className="row" style={{ padding: '2px 4px 0' }}>
