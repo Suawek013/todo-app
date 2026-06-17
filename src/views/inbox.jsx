@@ -95,7 +95,7 @@ function InboxItem({ item, index, boards, api, onPick, drag }) {
       style={{ padding: '13px 14px 13px 12px', display: 'flex', gap: 11, alignItems: 'flex-start',
         animationDelay: `${index * 35}ms`, cursor: 'default' }}
       draggable
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; api.setDrag({ kind: 'inbox', payload: item }); }}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item.id); api.setDrag({ kind: 'inbox', payload: item }); }}
       onDragEnd={() => api.setDrag(null)}>
       <span style={{ color: 'var(--faint)', cursor: 'grab', marginTop: 2, flexShrink: 0 }}
         title="Drag to a board or the matrix"><Icon name="drag" size={16} /></span>

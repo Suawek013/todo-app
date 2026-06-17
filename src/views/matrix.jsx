@@ -231,7 +231,7 @@ function MiniTask({ task, board, api, accent, source, dim }) {
       draggable
       onMouseEnter={(e) => { if (!dim) { e.currentTarget.style.background = colored ? tintBgHi(accent) : 'var(--surface-2)'; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
       onMouseLeave={(e) => { e.currentTarget.style.background = colored ? tintBg(accent) : 'var(--surface)'; e.currentTarget.style.transform = 'none'; }}
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; api.setDrag({ kind: 'task', payload: task }); }}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', task.id); api.setDrag({ kind: 'task', payload: task }); }}
       onDragEnd={() => api.setDrag(null)}
       onClick={() => api.openTask(task)}>
       <div style={{ fontSize: 12.5, fontWeight: 500, lineHeight: 1.32, color: 'var(--text)', textWrap: 'pretty' }}>{task.title}</div>

@@ -160,7 +160,7 @@ function TaskCard({ task, board, onOpen, onFocus, onDelete, draggable = true, on
     <div
       className={'task' + (dragging ? ' dragging' : '')}
       draggable={draggable}
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart && onDragStart(e, task); }}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', task.id); onDragStart && onDragStart(e, task); }}
       onDragEnd={onDragEnd}
       onClick={() => onOpen && onOpen(task)}
     >
