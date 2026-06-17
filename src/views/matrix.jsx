@@ -82,12 +82,12 @@ function MatrixView({ tasks, boards, mode, api, drag }) {
     setDrop(prev => (prev && prev.zone === zone ? prev : { zone, beforeId: null }));
   };
 
-  const DropLine = ({ accent }) => (
+  const renderDropLine = (accent) => (
     <div style={{ height: 2, borderRadius: 2, background: accent || 'var(--accent)',
       boxShadow: `0 0 6px ${accent || 'var(--accent)'}`, margin: '1px 0', flexShrink: 0 }} />
   );
 
-  const CardList = ({ zone, list, accent, source }) => {
+  const renderCardList = (zone, list, accent, source) => {
     const active = !!draggingId;
     const isHere = drop && drop.zone === zone;
     return (
@@ -96,14 +96,14 @@ function MatrixView({ tasks, boards, mode, api, drag }) {
         onDrop={(e) => dropOnZone(e, zone)}>
         {list.map((t, i) => (
           <React.Fragment key={t.id}>
-            {isHere && drop.beforeId === t.id && draggingId !== t.id && <DropLine accent={accent} />}
+            {isHere && drop.beforeId === t.id && draggingId !== t.id && renderDropLine(accent)}
             <div onDragOver={(e) => overCard(e, zone, list, i)} onDrop={(e) => dropOnCard(e, zone, list, i)}>
               <MiniTask task={t} board={boardName(t.board)} api={api}
                 accent={accent} source={source} dim={draggingId === t.id} />
             </div>
           </React.Fragment>
         ))}
-        {isHere && drop.beforeId === null && list.length > 0 && <DropLine accent={accent} />}
+        {isHere && drop.beforeId === null && list.length > 0 && renderDropLine(accent)}
         {list.length === 0 && (
           <div style={{ flex: 1, display: 'grid', placeItems: 'center', minHeight: source ? 0 : 64,
             border: `1px dashed ${isHere ? (accent || 'var(--accent)') : 'var(--border)'}`,
@@ -119,13 +119,13 @@ function MatrixView({ tasks, boards, mode, api, drag }) {
     );
   };
 
-  const Quad = ({ pos }) => {
+  const renderQuad = (pos) => {
     const q = cfg.quads[pos];
     const list = placed(q.key);
     const totalP = list.reduce((s, t) => s + (t.pomoEst || 0), 0);
     const isHere = drop && drop.zone === q.key && draggingId;
     return (
-      <div style={{
+      <div key={pos} style={{
         background: isHere ? tintBg(q.color) : 'var(--surface)',
         border: `1px solid ${isHere ? tintLine(q.color) : 'var(--border)'}`,
         borderTop: `2px solid ${q.color}`,
@@ -139,7 +139,7 @@ function MatrixView({ tasks, boards, mode, api, drag }) {
           <span className="tnum" style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>{list.length}</span>
           <span className="tnum" style={{ fontSize: 11, color: q.color, fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>🍅 {totalP}</span>
         </div>
-        <CardList zone={q.key} list={list} accent={q.color} />
+        {renderCardList(q.key, list, q.color)}
       </div>
     );
   };
@@ -177,7 +177,7 @@ function MatrixView({ tasks, boards, mode, api, drag }) {
           </div>
           {/* quadrants */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 10, minHeight: 0 }}>
-            <Quad pos="tl" /><Quad pos="tr" /><Quad pos="bl" /><Quad pos="br" />
+            {renderQuad('tl')} {renderQuad('tr')} {renderQuad('bl')} {renderQuad('br')}
           </div>
           <div />
           {/* X axis label */}
@@ -207,7 +207,7 @@ function MatrixView({ tasks, boards, mode, api, drag }) {
               </select>
             </div>
             <div style={{ padding: 12, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <CardList zone="pool" list={unprior} accent={null} source />
+              {renderCardList('pool', unprior, null, true)}
             </div>
           </div>
         )}
