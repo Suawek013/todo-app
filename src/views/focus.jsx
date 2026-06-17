@@ -1,3 +1,5 @@
+import { Icon, ICONS, PriorityPill, StatusPill, TagChip, TimerRing, TaskCard, Modal, Segmented, STATUS_META, PRIORITY_META, TYPE_BADGE, NOTE_TYPE, timeAgo, fmtMin, fmtClock } from '../components.jsx';
+import { SEED } from '../data.jsx';
 import React from 'react';
 /* ============================================================
    VIEW: FOCUS — Pomodoro session (setup / active / overtime / done)
@@ -308,4 +310,4 @@ function MiniPlayer({ focus, tasks, api }) {
   );
 }
 
-Object.assign(window, { FocusView, MiniPlayer });
+export { FocusView, MiniPlayer };

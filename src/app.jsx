@@ -3,7 +3,11 @@ import { StatsView } from './views/stats.jsx';
 import { NotesView } from './views/notes.jsx';
 import { ComponentSheet } from './views/components-sheet.jsx';
 import { SEED } from './data.jsx';
-import { NOTE_TYPE } from './components.jsx';
+import { NOTE_TYPE, Icon, Modal } from './components.jsx';
+import { BoardsView, NewBoardModal } from './views/boards.jsx';
+import { MatrixView } from './views/matrix.jsx';
+import { FocusView, MiniPlayer } from './views/focus.jsx';
+import { TaskModal, QuickCapture } from './views/modals.jsx';
 
 
 import './styles.css';

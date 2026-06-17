@@ -1,3 +1,4 @@
+import { Icon, ICONS, PriorityPill, StatusPill, TagChip, TimerRing, TaskCard, Modal, Segmented, STATUS_META, PRIORITY_META, TYPE_BADGE, NOTE_TYPE, timeAgo, fmtMin, fmtClock } from '../components.jsx';
 import { SEED } from '../data.jsx';
 
 import React from 'react';
@@ -176,4 +177,4 @@ function QuickCapture({ boards, api, onClose }) {
   );
 }
 
-Object.assign(window, { TaskModal, QuickCapture });
+export { TaskModal, QuickCapture };
