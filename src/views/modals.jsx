@@ -38,7 +38,7 @@ function TaskModal({ task, boards, api, onClose }) {
             <span className="meta">·</span>
             <span style={{ color: task.pomoActual > task.pomoEst ? 'var(--accent)' : 'var(--text)' }}>
               {task.pomoActual} actual</span>
-            {task.focusMin ? <span className="meta">({window.fmtMin(task.focusMin)} tracked)</span> : null}</span>
+            {task.focusMin ? <span className="meta">({fmtMin(task.focusMin)} tracked)</span> : null}</span>
           {task.due && <><span className="label">Due</span><span className="row" style={{ gap: 6 }}><Icon name="cal" size={14} style={{ color: 'var(--muted)' }} />{task.due}</span></>}
         </div>
 
@@ -101,7 +101,7 @@ function TaskModal({ task, boards, api, onClose }) {
           <label className="label">Activity</label>
           <div className="col" style={{ gap: 8 }}>
             {[
-              { ic: 'play', t: `Focused for ${window.fmtMin(task.focusMin || 0)}`, when: '2h ago', show: !!task.focusMin },
+              { ic: 'play', t: `Focused for ${fmtMin(task.focusMin || 0)}`, when: '2h ago', show: !!task.focusMin },
               { ic: 'arrow', t: `Moved to ${col?.name}`, when: 'yesterday', show: true },
               { ic: 'plus', t: 'Created', when: '3 days ago', show: true },
             ].filter(a => a.show).map((a, i) => (

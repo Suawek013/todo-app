@@ -75,7 +75,7 @@ function BoardsView({ boards, tasks, activeBoard, api, drag }) {
         overflowX: 'auto', minHeight: 'calc(100% - 170px)' }}>
         {board.columns.map(col => {
           const colTasks = boardTasks.filter(t => t.col === col.id);
-          const m = window.STATUS_META[col.status];
+          const m = STATUS_META[col.status];
           return (
             <div key={col.id}
               className="col"

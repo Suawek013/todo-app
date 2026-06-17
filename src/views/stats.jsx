@@ -26,7 +26,7 @@ function StatsView({ stats, heat, api }) {
 
         {/* key metrics */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
-          <Metric icon="flame" label="Total focus time" value={window.fmtMin(s.focusMin)} accent="var(--accent)" delta="+8% vs last week" />
+          <Metric icon="flame" label="Total focus time" value={fmtMin(s.focusMin)} accent="var(--accent)" delta="+8% vs last week" />
           <Metric icon="focus" label="Pomodoros" value={`${s.pomos} 🍅`} delta="+4" />
           <Metric icon="check" label="Tasks completed" value={s.tasksDone} delta="+2" />
           <Metric icon="clock" label="Avg session" value={`${s.avgSession} min`} delta="−3 min" />
@@ -64,7 +64,7 @@ function StatsView({ stats, heat, api }) {
                       <div className="prog-bar" style={{ width: '100%', height: 5 }}>
                         <i style={{ width: `${(t.min/max)*100}%`, background: t.color }} /></div>
                     </div>
-                    <span className="disp tnum" style={{ fontSize: 12.5, width: 58, textAlign: 'right' }}>{window.fmtMin(t.min)}</span>
+                    <span className="disp tnum" style={{ fontSize: 12.5, width: 58, textAlign: 'right' }}>{fmtMin(t.min)}</span>
                     <span className="meta disp tnum" style={{ width: 28, textAlign: 'right' }}>{t.pomos}🍅</span>
                   </div>
                 );
@@ -144,7 +144,7 @@ function Heatmap({ heat }) {
           {hover && (
             <div className="card tnum" style={{ position: 'absolute', top: -34, left: `${(hover.wi/18)*100}%`,
               padding: '4px 9px', fontSize: 11, whiteSpace: 'nowrap', background: 'var(--surface-3)', zIndex: 5 }}>
-              {hover.v === 0 ? 'No focus' : window.fmtMin(hover.v)}
+              {hover.v === 0 ? 'No focus' : fmtMin(hover.v)}
             </div>
           )}
         </div>
@@ -165,7 +165,7 @@ function HourChart({ data }) {
       {data.map((v, h) => (
         <div key={h} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%' }}>
           <div style={{ flex: 1, width: '100%', display: 'flex', alignItems: 'flex-end' }}>
-            <div title={`${h}:00 — ${window.fmtMin(v)}`}
+            <div title={`${h}:00 — ${fmtMin(v)}`}
               style={{ width: '100%', height: `${(v/max)*100}%`, minHeight: v ? 2 : 0, borderRadius: '3px 3px 0 0',
                 background: v === max ? 'var(--accent)' : 'rgba(63,185,138,0.4)' }} />
           </div>
@@ -186,7 +186,7 @@ function DayChart({ data }) {
           <span className="meta disp" style={{ width: 30, fontSize: 11 }}>{labels[i]}</span>
           <div className="prog-bar" style={{ flex: 1, height: 9, borderRadius: 4 }}>
             <i style={{ width: `${(v/max)*100}%`, background: v === max ? 'var(--accent)' : 'var(--progress)', borderRadius: 4 }} /></div>
-          <span className="meta disp tnum" style={{ width: 42, textAlign: 'right', fontSize: 11 }}>{window.fmtMin(v)}</span>
+          <span className="meta disp tnum" style={{ width: 42, textAlign: 'right', fontSize: 11 }}>{fmtMin(v)}</span>
         </div>
       ))}
     </div>

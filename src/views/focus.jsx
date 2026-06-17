@@ -172,9 +172,9 @@ function FocusActive({ focus, tasks, api }) {
             <div>
               <div className="disp tnum" style={{ fontSize: 58, fontWeight: 600, lineHeight: 1,
                 color: isOver ? '#87b3f2' : 'var(--text)' }}>
-                {isOver ? '+' : ''}{window.fmtClock(isOver ? focus.overtimeSec : focus.secondsLeft)}</div>
+                {isOver ? '+' : ''}{fmtClock(isOver ? focus.overtimeSec : focus.secondsLeft)}</div>
               <div className="meta tnum" style={{ marginTop: 10, fontSize: 12 }}>
-                {window.fmtMin(Math.floor(focus.elapsedFocusSec / 60))} focused total</div>
+                {fmtMin(Math.floor(focus.elapsedFocusSec / 60))} focused total</div>
               {isOver && <button className="btn sm" style={{ marginTop: 12 }} onClick={api.takeBreak}>
                 Take break now</button>}
             </div>
@@ -240,7 +240,7 @@ function FocusComplete({ focus, tasks, api }) {
         <div className="meta" style={{ marginBottom: 24 }}>Nice work. Here's how it went.</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 18 }}>
-          <Stat k="Focus time" v={window.fmtMin(focusMin)} accent="var(--accent)" />
+          <Stat k="Focus time" v={fmtMin(focusMin)} accent="var(--accent)" />
           <Stat k="Pomodoros" v={`${actualPomos} 🍅`} />
           <Stat k="Breaks" v={focus.breaksTaken} />
           <Stat k="Distractions" v={focus.distractions} />
@@ -298,7 +298,7 @@ function MiniPlayer({ focus, tasks, api }) {
         <div style={{ fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {isBreak ? 'Break' : task?.title}</div>
         <div className="disp tnum" style={{ fontSize: 12, color: 'var(--muted)' }}>
-          {isOver ? '+' : ''}{window.fmtClock(isOver ? focus.overtimeSec : focus.secondsLeft)} {isOver ? 'overtime' : 'left'}</div>
+          {isOver ? '+' : ''}{fmtClock(isOver ? focus.overtimeSec : focus.secondsLeft)} {isOver ? 'overtime' : 'left'}</div>
       </div>
       <div className="row" style={{ gap: 2 }} onClick={(e) => e.stopPropagation()}>
         {!isOver && <button className="iconbtn" style={{ width: 28, height: 28 }} onClick={api.togglePause}>
