@@ -3,6 +3,7 @@ import { StatsView } from './views/stats.jsx';
 import { NotesView } from './views/notes.jsx';
 import { ComponentSheet } from './views/components-sheet.jsx';
 import { SEED } from './data.jsx';
+import { supabase } from './supabase.js';
 import { NOTE_TYPE, Icon, Modal } from './components.jsx';
 import { BoardsView, NewBoardModal } from './views/boards.jsx';
 import { MatrixView } from './views/matrix.jsx';
@@ -50,10 +51,10 @@ function tick(f) {
 function App() {
   const seed = SEED;
   const [view, setView] = useState('inbox');
-  const [boards, setBoards] = useState(seed.BOARDS);
-  const [tasks, setTasks] = useState(seed.TASKS);
-  const [inbox, setInbox] = useState(seed.INBOX);
-  const [notes, setNotes] = useState(seed.NOTES);
+  const [boards, setBoards] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [inbox, setInbox] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [activeBoard, setActiveBoard] = useState('b_work');
   const [matrixMode, setMatrixMode] = useState('eisen');
   const [focus, setFocus] = useState(null);
@@ -64,6 +65,22 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [dropBoard, setDropBoard] = useState(null);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    async function load() {
+      const [b, t, i, n] = await Promise.all([
+        supabase.from('boards').select('*'),
+        supabase.from('tasks').select('*'),
+        supabase.from('inbox').select('*').order('created', { ascending: false }),
+        supabase.from('notes').select('*').order('edited', { ascending: false })
+      ]);
+      if (b.data) setBoards(b.data);
+      if (t.data) setTasks(t.data);
+      if (i.data) setInbox(i.data);
+      if (n.data) setNotes(n.data);
+    }
+    load();
+  }, []);
 
   const toastRef = useRef();
   const flash = useCallback((msg) => {
@@ -98,9 +115,16 @@ function App() {
     setDrag, setActiveBoard: (id) => { setActiveBoard(id); setView('boards'); }, setMatrixMode,
 
     // inbox
-    addInbox: (o) => setInbox(p => [{ id: seed.uid('i'), created: Date.now(), desc: '', ...o }, ...p]),
-    deleteInbox: (id) => setInbox(p => p.filter(i => i.id !== id)),
-        inboxToBoard: (item, boardId, colId, beforeId) => {
+    addInbox: (o) => {
+      const item = { id: seed.uid('i'), created: Date.now(), desc: '', ...o };
+      setInbox(p => [item, ...p]);
+      supabase.from('inbox').insert([item]).then();
+    },
+    deleteInbox: (id) => {
+      setInbox(p => p.filter(i => i.id !== id));
+      supabase.from('inbox').delete().eq('id', id).then();
+    },
+    inboxToBoard: (item, boardId, colId, beforeId) => {
       const t = mkTask({ title: item.title, board: boardId, col: colId });
       setTasks(p => {
         const rest = [...p];
@@ -109,17 +133,26 @@ function App() {
         return rest;
       });
       setInbox(p => p.filter(x => x.id !== item.id));
+      supabase.from('tasks').insert([t]).then();
+      supabase.from('inbox').delete().eq('id', item.id).then();
     },
     inboxToMatrix: (item) => {
+      if (!boards[0]) return;
       const b = boards[0];
-      setTasks(p => [mkTask({ title: item.title, desc: item.desc || '', board: b.id, col: firstCol(b, 'todo') }), ...p]);
+      const t = mkTask({ title: item.title, desc: item.desc || '', board: b.id, col: firstCol(b, 'todo') });
+      setTasks(p => [t, ...p]);
       setInbox(p => p.filter(i => i.id !== item.id));
       setView('matrix'); flash('Sent to Matrix — drag into a quadrant');
+      supabase.from('tasks').insert([t]).then();
+      supabase.from('inbox').delete().eq('id', item.id).then();
     },
     inboxToNote: (item) => {
-      setNotes(p => [{ id: seed.uid('n'), type: 'idea', title: item.title, body: item.desc || item.title, edited: Date.now() }, ...p]);
+      const n = { id: seed.uid('n'), type: 'idea', title: item.title, body: item.desc || item.title, edited: Date.now() };
+      setNotes(p => [n, ...p]);
       setInbox(p => p.filter(i => i.id !== item.id));
       setView('notes'); flash('Converted to note');
+      supabase.from('notes').insert([n]).then();
+      supabase.from('inbox').delete().eq('id', item.id).then();
     },
 
     // boards / tasks
@@ -132,42 +165,90 @@ function App() {
         if (l.includes('review') || l.includes('block')) return 'blocked';
         return 'todo'; };
       const columns = cols.map((c, i) => ({ id: seed.uid('c'), name: c, status: statusFor(c, i, cols.length) }));
-      setBoards(p => [...p, { id, name, icon, color, temporary: temp, columns }]);
+      const b = { id, name, icon, color, temporary: temp, columns };
+      setBoards(p => [...p, b]);
       setActiveBoard(id); setView('boards'); setNewBoardOpen(false); flash(`Created ${icon} ${name}`);
+      supabase.from('boards').insert([b]).then();
     },
-        moveTask: (id, boardId, colId, beforeId) => setTasks(p => {
-      const task = p.find(t => t.id === id);
-      if (!task) return p;
-      const updated = { ...task, board: boardId, col: colId };
-      const rest = p.filter(t => t.id !== id);
-      const idx = (beforeId && beforeId !== id) ? rest.findIndex(t => t.id === beforeId) : -1;
-      if (idx === -1) rest.push(updated); else rest.splice(idx, 0, updated);
-      return rest;
-    }),
+    moveTask: (id, boardId, colId, beforeId) => {
+      setTasks(p => {
+        const task = p.find(t => t.id === id);
+        if (!task) return p;
+        const updated = { ...task, board: boardId, col: colId };
+        const rest = p.filter(t => t.id !== id);
+        const idx = (beforeId && beforeId !== id) ? rest.findIndex(t => t.id === beforeId) : -1;
+        if (idx === -1) rest.push(updated); else rest.splice(idx, 0, updated);
+        return rest;
+      });
+      supabase.from('tasks').update({ board: boardId, col: colId }).eq('id', id).then();
+    },
     addTaskToCol: (boardId, colId, title) => {
       const t = mkTask({ title: title || 'New task', board: boardId, col: colId });
       setTasks(p => [...p, t]);
       if (!title) setOpenTaskId(t.id);
+      supabase.from('tasks').insert([t]).then();
     },
-    deleteTask: (id) => { setTasks(p => p.filter(t => t.id !== id)); flash('Task deleted'); },
-    archiveTask: (id) => { setTasks(p => p.filter(t => t.id !== id)); flash('Task archived'); },
+    deleteTask: (id) => { 
+      setTasks(p => p.filter(t => t.id !== id)); flash('Task deleted'); 
+      supabase.from('tasks').delete().eq('id', id).then();
+    },
+    archiveTask: (id) => { 
+      setTasks(p => p.filter(t => t.id !== id)); flash('Task archived'); 
+      supabase.from('tasks').delete().eq('id', id).then(); // Treated as delete for now
+    },
     openTask: (t) => setOpenTaskId(t.id),
-    updateTask: (id, patch) => setTasks(p => p.map(t => t.id === id ? { ...t, ...patch } : t)),
-    toggleTag: (id, tag) => setTasks(p => p.map(t => t.id === id ? { ...t, tags: t.tags.includes(tag) ? t.tags.filter(x => x !== tag) : [...t.tags, tag] } : t)),
-    toggleSub: (id, i) => setTasks(p => p.map(t => t.id === id ? { ...t, subtasks: t.subtasks.map((s, j) => j === i ? { ...s, done: !s.done } : s) } : t)),
-    addSub: (id, txt) => setTasks(p => p.map(t => t.id === id ? { ...t, subtasks: [...t.subtasks, { t: txt, done: false }] } : t)),
-    removeSub: (id, i) => setTasks(p => p.map(t => t.id === id ? { ...t, subtasks: t.subtasks.filter((_, j) => j !== i) } : t)),
-    setPriority: (id, field, val) => { setTasks(p => p.map(t => t.id === id ? { ...t, [field]: val } : t)); },
-    // matrix: set quadrant (val may be null = unprioritized) AND reposition relative to beforeId for drag-sort
-    reorderMatrix: (id, field, val, beforeId) => setTasks(p => {
-      const task = p.find(t => t.id === id);
-      if (!task) return p;
-      const updated = { ...task, [field]: val };
-      const rest = p.filter(t => t.id !== id);
-      const idx = (beforeId && beforeId !== id) ? rest.findIndex(t => t.id === beforeId) : -1;
-      if (idx === -1) rest.push(updated); else rest.splice(idx, 0, updated);
-      return rest;
-    }),
+    updateTask: (id, patch) => {
+      setTasks(p => p.map(t => t.id === id ? { ...t, ...patch } : t));
+      supabase.from('tasks').update(patch).eq('id', id).then();
+    },
+    toggleTag: (id, tag) => {
+      setTasks(p => p.map(t => {
+        if (t.id !== id) return t;
+        const tags = t.tags.includes(tag) ? t.tags.filter(x => x !== tag) : [...t.tags, tag];
+        supabase.from('tasks').update({ tags }).eq('id', id).then();
+        return { ...t, tags };
+      }));
+    },
+    toggleSub: (id, i) => {
+      setTasks(p => p.map(t => {
+        if (t.id !== id) return t;
+        const subtasks = t.subtasks.map((s, j) => j === i ? { ...s, done: !s.done } : s);
+        supabase.from('tasks').update({ subtasks }).eq('id', id).then();
+        return { ...t, subtasks };
+      }));
+    },
+    addSub: (id, txt) => {
+      setTasks(p => p.map(t => {
+        if (t.id !== id) return t;
+        const subtasks = [...t.subtasks, { t: txt, done: false }];
+        supabase.from('tasks').update({ subtasks }).eq('id', id).then();
+        return { ...t, subtasks };
+      }));
+    },
+    removeSub: (id, i) => {
+      setTasks(p => p.map(t => {
+        if (t.id !== id) return t;
+        const subtasks = t.subtasks.filter((_, j) => j !== i);
+        supabase.from('tasks').update({ subtasks }).eq('id', id).then();
+        return { ...t, subtasks };
+      }));
+    },
+    setPriority: (id, field, val) => { 
+      setTasks(p => p.map(t => t.id === id ? { ...t, [field]: val } : t)); 
+      supabase.from('tasks').update({ [field]: val }).eq('id', id).then();
+    },
+    reorderMatrix: (id, field, val, beforeId) => {
+      setTasks(p => {
+        const task = p.find(t => t.id === id);
+        if (!task) return p;
+        const updated = { ...task, [field]: val };
+        const rest = p.filter(t => t.id !== id);
+        const idx = (beforeId && beforeId !== id) ? rest.findIndex(t => t.id === beforeId) : -1;
+        if (idx === -1) rest.push(updated); else rest.splice(idx, 0, updated);
+        return rest;
+      });
+      supabase.from('tasks').update({ [field]: val }).eq('id', id).then();
+    },
 
     // focus
     startSession: ({ taskId, pomos, pomoLen, shortB, longEvery, autoB }) => setFocus({
@@ -194,6 +275,7 @@ function App() {
           if (t.id !== f.taskId) return t;
           const upd = { ...t, focusMin: (t.focusMin || 0) + mins, pomoActual: (t.pomoActual || 0) + f.completedPomos };
           if (action === 'done') { const b = boards.find(x => x.id === t.board); upd.col = firstCol(b, 'done'); }
+          supabase.from('tasks').update({ focusMin: upd.focusMin, pomoActual: upd.pomoActual, col: upd.col }).eq('id', t.id).then();
           return upd;
         }));
         if (action === 'done') flash('Task marked done · time tracked');
@@ -205,17 +287,51 @@ function App() {
     },
 
     // notes
-    addNote: () => { const id = seed.uid('n'); setNotes(p => [{ id, type: 'idea', title: 'Untitled note', body: '# Untitled note\n\n', edited: Date.now() }, ...p]); return id; },
-    updateNote: (id, patch) => setNotes(p => p.map(n => n.id === id ? { ...n, ...patch, edited: Date.now() } : n)),
-    deleteNote: (id) => setNotes(p => p.filter(n => n.id !== id)),
-    noteToTask: (note) => { setInbox(p => [{ id: seed.uid('i'), type: 'task', title: note.title, created: Date.now(), desc: '' }, ...p]); flash('Note sent to Inbox as a task'); },
-    textToTask: (txt) => { setInbox(p => [{ id: seed.uid('i'), type: 'task', title: txt, created: Date.now(), desc: '' }, ...p]); flash('Line sent to Inbox as a task'); },
+    addNote: () => { 
+      const id = seed.uid('n'); 
+      const n = { id, type: 'idea', title: 'Untitled note', body: '# Untitled note\n\n', edited: Date.now() };
+      setNotes(p => [n, ...p]); 
+      supabase.from('notes').insert([n]).then();
+      return id; 
+    },
+    updateNote: (id, patch) => {
+      const edited = Date.now();
+      setNotes(p => p.map(n => n.id === id ? { ...n, ...patch, edited } : n));
+      supabase.from('notes').update({ ...patch, edited }).eq('id', id).then();
+    },
+    deleteNote: (id) => {
+      setNotes(p => p.filter(n => n.id !== id));
+      supabase.from('notes').delete().eq('id', id).then();
+    },
+    noteToTask: (note) => { 
+      const t = { id: seed.uid('i'), type: 'task', title: note.title, created: Date.now(), desc: '' };
+      setInbox(p => [t, ...p]); flash('Note sent to Inbox as a task'); 
+      supabase.from('inbox').insert([t]).then();
+    },
+    textToTask: (txt) => { 
+      const t = { id: seed.uid('i'), type: 'task', title: txt, created: Date.now(), desc: '' };
+      setInbox(p => [t, ...p]); flash('Line sent to Inbox as a task'); 
+      supabase.from('inbox').insert([t]).then();
+    },
 
     // quick capture
     quickCapture: ({ type, title, boardId }) => {
-      if (type === 'note') { setNotes(p => [{ id: seed.uid('n'), type: 'idea', title, body: '# ' + title + '\n\n', edited: Date.now() }, ...p]); flash('Note captured'); return; }
-      if (boardId) { const b = boards.find(x => x.id === boardId); setTasks(p => [mkTask({ title, board: boardId, col: firstCol(b, 'todo') }), ...p]); flash(`Added to ${b.icon} ${b.name}`); return; }
-      setInbox(p => [{ id: seed.uid('i'), type, title, created: Date.now(), desc: '' }, ...p]); flash('Captured to Inbox');
+      if (type === 'note') { 
+        const n = { id: seed.uid('n'), type: 'idea', title, body: '# ' + title + '\n\n', edited: Date.now() };
+        setNotes(p => [n, ...p]); flash('Note captured'); 
+        supabase.from('notes').insert([n]).then();
+        return; 
+      }
+      if (boardId) { 
+        const b = boards.find(x => x.id === boardId); 
+        const t = mkTask({ title, board: boardId, col: firstCol(b, 'todo') });
+        setTasks(p => [t, ...p]); flash(`Added to ${b.icon} ${b.name}`); 
+        supabase.from('tasks').insert([t]).then();
+        return; 
+      }
+      const i = { id: seed.uid('i'), type, title, created: Date.now(), desc: '' };
+      setInbox(p => [i, ...p]); flash('Captured to Inbox');
+      supabase.from('inbox').insert([i]).then();
     },
     openSearch: () => setSearchOpen(true),
   };
